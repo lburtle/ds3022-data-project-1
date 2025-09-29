@@ -1,0 +1,4 @@
+tempdownloads
+*.log
+*.db
+*.duckdb
