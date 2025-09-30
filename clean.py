@@ -13,34 +13,30 @@ def clean():
     con = None
     try:
         con = duckdb.connect(database=DB_FILE, read_only=False)
+        con.execute("PRAGMA memory_limit='20GB'")
         logger.info(f"Connected to database: {DB_FILE}")
 
         
         yellow_original_count = con.execute(f"""
                     SELECT COUNT(*) FROM yellow
-                """)
+                """).fetchone()[0]
 
         green_original_count = con.execute(f"""
                     SELECT COUNT(*) FROM green
-                """)
+                """).fetchone()[0]
 
         ## Remove duplicate rows
         logger.info("Removing duplicate rows...")
-        con.execute(f"""
-                    CREATE TABLE yellow_clean AS
-                    SELECT DISTINCT * FROM yellow;
+        # Yellow table
+        con.execute("CREATE TABLE yellow_clean AS SELECT DISTINCT * FROM yellow")
+        con.execute("DROP TABLE yellow")
+        con.execute("ALTER TABLE yellow_clean RENAME TO yellow")
 
-                    DROP TABLE yellow;
-                    ALTER TABLE yellow_clean RENAME TO yellow;
-                """)
+        # Green table
+        con.execute("CREATE TABLE green_clean AS SELECT DISTINCT * FROM green")
+        con.execute("DROP TABLE green")
+        con.execute("ALTER TABLE green_clean RENAME TO green")
 
-        con.execute(f"""
-                    CREATE TABLE green_clean AS
-                    SELECT DISTINCT * FROM green;
-
-                    DROP TABLE green;
-                    ALTER TABLE green_clean RENAME TO green;
-                """)
         
 
         logger.info("Dropped duplicate rows")
@@ -102,6 +98,7 @@ def clean():
 
         logger.info("Deleted")
 
+        ## Deleting those with 0 passengers
         con.execute(f"""
                     DELETE FROM yellow
                     WHERE passenger_count = 0
@@ -112,6 +109,7 @@ def clean():
                     WHERE passenger_count = 0
                 """)
 
+        ## Deleting those with 0 distance
         con.execute(f"""
                     DELETE FROM yellow
                     WHERE trip_distance = 0
@@ -122,6 +120,7 @@ def clean():
                     WHERE trip_distance = 0
                 """)
 
+        ## Deleting those with over 100 in distance
         con.execute(f"""
                     DELETE FROM yellow
                     WHERE trip_distance > 100
@@ -132,6 +131,7 @@ def clean():
                     WHERE trip_distance > 100
                 """)
 
+        ## Deleting trips over 24 hours
         con.execute(f"""
                     DELETE FROM yellow
                     WHERE date_diff('hour', tpep_dropoff_datetime, tpep_pickup_datetime) > 24
@@ -142,6 +142,7 @@ def clean():
                     WHERE date_diff('hour', lpep_dropoff_datetime, lpep_pickup_datetime) > 24
                 """)
 
+        ## Calculating difference in size from before and after
         logger.info("Cleaning executed")
         logger.info("Testing to see if cleaning succeeded...")
 
@@ -155,6 +156,7 @@ def clean():
         logger.info("# of duplicate yellow trips dropped: ", yellow_original_count - yellow_new_size)
         logger.info("# of duplicate green trips dropped: ", green_original_count - green_new_size)
 
+        ## Returning numbers to check if cleaning worked
         logger.info("# of 0 passengers in yellow: ", 
         con.execute(f"""
                     SELECT COUNT(*) FROM yellow
@@ -201,14 +203,14 @@ def clean():
         logger.info("# of yellow trips > 24 hrs: ",
         con.execute(f"""
                     SELECT COUNT(*) FROM yellow
-                    WHERE date_diff('hour', tpep_dropoff_datetime - tpep_pickup_datetime) > 24;
+                    WHERE date_diff('hour', tpep_dropoff_datetime, tpep_pickup_datetime) > 24;
                 """)
                 )
 
         logger.info("# of green trips > 24 hrs: ",
         con.execute(f"""
                     SELECT COUNT(*) FROM green
-                    WHERE date_diff('hour', tpep_dropoff_datetime - tpep_pickup_datetime) > 24;
+                    WHERE date_diff('hour', lpep_dropoff_datetime, lpep_pickup_datetime) > 24;
                 """)
                 )
 

@@ -12,9 +12,9 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Paths to CSVs (adjust if needed)
-YELLOW_CSV = Path("output/yellow_trips.csv")
-GREEN_CSV = Path("output/green_trips.csv")
-OUTPUT_PLOT = Path("output/co2_by_month.png")
+YELLOW_CSV = Path("dbt/output/yellow_trips.csv")
+GREEN_CSV = Path("dbt/output/green_trips.csv")
+OUTPUT_PLOT = Path("dbt/output/co2_by_month.png")
 
 # Helper mapping from DuckDB dayofweek (Sunday=0) to names
 DAYNAME = {0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday",
@@ -22,7 +22,7 @@ DAYNAME = {0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday",
 
 def load_and_clean(path):
     logger.info("""Loading CSV into a DataFrame and performing basic cleaning / dtype fixes.""")
-    df = pd.read_csv(path, parse_dates=["pickup_datetime", "dropoff_datetime"], infer_datetime_format=True)
+    df = pd.read_csv(path, parse_dates=["pickup_datetime", "dropoff_datetime"])
 
     # Ensure expected columns exist
     expected = {"pickup_datetime", "dropoff_datetime", "trip_distance", "trip_co2_kgs",

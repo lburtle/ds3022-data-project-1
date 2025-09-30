@@ -5,48 +5,54 @@
     header=true
 ) }}
 
-{{ log("Building yellow_trips", info=True) }}
-
-with yellow_trips as (
-    select
-        tpep_pickup_datetime as pickup_datetime,
-        tpep_dropoff_datetime as dropoff_datetime,
-        trip_distance
-    from {{ source('main', 'yellow') }}
+WITH yellow_trips AS (
+    SELECT
+        tpep_pickup_datetime AS pickup_datetime,
+        tpep_dropoff_datetime AS dropoff_datetime,
+        trip_distance,
+        VendorID,
+        RatecodeID,
+        passenger_count,
+        PULocationID,
+        DOLocationID,
+        payment_type
+    FROM {{ source('main', 'yellow') }}
 ),
 
-final_calculations as (
-    select
-        yt.pickup_datetime,
-        yt.dropoff_datetime,
-        yt.trip_distance,
+yellow_with_emissions AS (
+    SELECT
+        yt.*,
+        em.co2_grams_per_mile
+    FROM yellow_trips yt
+    LEFT JOIN {{ source('main', 'emissions') }} em
+        ON em.vehicle_type = 'yellow'  -- or a column mapping if you have one
+),
 
-        -- Total CO2 output (kg)
-        (yt.trip_distance * em.co2_grams_per_mile) / 1000 as trip_co2_kgs,
+final_calculations AS (
+    SELECT
+        *,
+        -- 1. Trip CO2 in kilograms
+        (trip_distance * co2_grams_per_mile) / 1000.0 AS trip_co2_kgs,
 
-        -- Trip duration (minutes)
-        date_diff('minute', yt.pickup_datetime, yt.dropoff_datetime) as duration_minutes,
+        -- 2. Trip duration in minutes
+        DATE_DIFF('minute', pickup_datetime, dropoff_datetime) AS duration_minutes,
 
-        -- Average speed (mph)
-        case
-            when date_diff('minute', yt.pickup_datetime, yt.dropoff_datetime) > 0
-            then yt.trip_distance / (date_diff('minute', yt.pickup_datetime, yt.dropoff_datetime) / 60.0)
-            else 0
-        end as avg_mph,
+        -- 3. Average speed in mph
+        CASE
+            WHEN DATE_DIFF('minute', pickup_datetime, dropoff_datetime) > 0
+            THEN trip_distance / (DATE_DIFF('minute', pickup_datetime, dropoff_datetime)/60.0)
+            ELSE 0
+        END AS avg_mph,
 
-        -- Date parts
-        extract(hour from yt.pickup_datetime) as hour_of_day,
-        extract(dayofweek from yt.pickup_datetime) as day_of_week,
-        extract(week from yt.pickup_datetime) as week_of_year,
-        extract(month from yt.pickup_datetime) as month_of_year
-
-    from yellow_trips yt
-    left join {{ source('main', 'emissions') }} em
-        on yt.vehicle_type = em.vehicle_type
-        and yt.fuel_type = em.fuel_Type
+        -- 4. Time-based features
+        EXTRACT(hour FROM pickup_datetime) AS hour_of_day,
+        EXTRACT(dayofweek FROM pickup_datetime) AS day_of_week,
+        EXTRACT(week FROM pickup_datetime) AS week_of_year,
+        EXTRACT(month FROM pickup_datetime) AS month_of_year
+    FROM yellow_with_emissions
 )
 
-select *
-from final_calculations
-where trip_distance > 0
-  and duration_minutes > 0;
+SELECT *
+FROM final_calculations
+WHERE trip_distance > 0
+  AND DATE_DIFF('minute', pickup_datetime, dropoff_datetime) > 0

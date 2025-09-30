@@ -1,0 +1,10 @@
+version: 2
+
+sources:
+  - name: main 
+    database: traffic
+    schema: main
+    tables:
+      - name: yellow
+      - name: green
+      - name: emissions

@@ -56,6 +56,7 @@ def process_data_for_color(con, color, years, months):
     first_file_loaded = False
     base_url = "https://d37ci6vzurychx.cloudfront.net/trip-data"
 
+    ## Loop through each month and each year for data requests and save to temp file to uplaad
     for year in years:
         for month in months:
             url = f"{base_url}/{color}_tripdata_{year}-{month}.parquet"
@@ -93,6 +94,7 @@ def load_parquet_files():
         con = duckdb.connect(database=DB_FILE, read_only=False)
         logger.info(f"Connected to DuckDB database: '{DB_FILE}'")
 
+        ## List of values to iterate through for years and months
         years = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024]
         months = [f"{m:02d}" for m in range(1, 13)] # Generates ['01', '02', ..., '12']
 
@@ -115,6 +117,7 @@ def load_parquet_files():
         finally:
             logger.info("Success")
         
+        ## Remove temp download dir
         os.rmdir(DOWNLOAD_DIR)
 
         yellow_count = con.execute(f"""

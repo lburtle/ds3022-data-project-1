@@ -4,3 +4,6 @@ tempdownloads
 *.duckdb
 *.tmp
 *.wal
+dbt/output
+dbt/.user.yml
+dbt/target
