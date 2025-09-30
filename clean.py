@@ -147,10 +147,10 @@ def clean():
 
         yellow_new_size = con.execute(f"""
                     SELECT COUNT(*) from yellow;
-                """)
+                """).fetchone()[0]
         green_new_size = con.execute(f"""
                     SELECT COUNT(*) from green;
-                """)
+                """).fetchone()[0]
 
         logger.info("# of duplicate yellow trips dropped: ", yellow_original_count - yellow_new_size)
         logger.info("# of duplicate green trips dropped: ", green_original_count - green_new_size)
