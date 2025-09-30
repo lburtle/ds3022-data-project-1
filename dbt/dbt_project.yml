@@ -11,7 +11,11 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
+clean-targets:
+  - "target"
+  - "dbt_packages"
+  - "output"
+
 models:
-  nyc_taxi_emissions:
-    staging:
-      +materialized: table
+  taxi_co2:
+    +materialized: view
