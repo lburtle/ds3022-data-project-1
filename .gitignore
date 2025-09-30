@@ -2,3 +2,5 @@ tempdownloads
 *.log
 *.db
 *.duckdb
+*.tmp
+*.wal

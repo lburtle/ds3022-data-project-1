@@ -1,4 +1,6 @@
 duckdb
 pandas
 dbt-duckdb
+dbt-core
 requests
+matplotlib.pyplot

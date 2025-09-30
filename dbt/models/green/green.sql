@@ -5,42 +5,48 @@
     header=true
 ) }}
 
-WITH green_trips AS (
-    SELECT
-        'green' AS service_type,
-        lpep_pickup_datetime AS pickup_datetime,
-        lpep_dropoff_datetime AS dropoff_datetime,
+{{ log("Building green_trips", info=True) }}
+
+with green_trips as (
+    select
+        lpep_pickup_datetime as pickup_datetime,
+        lpep_dropoff_datetime as dropoff_datetime,
         trip_distance
-    FROM {{ source('main', 'green') }}
+    from {{ source('main', 'green') }}
 ),
 
-final_calculations AS (
-    SELECT
-        gt.service_type,
+final_calculations as (
+    select
         gt.pickup_datetime,
         gt.dropoff_datetime,
         gt.trip_distance,
 
-        (gt.trip_distance * em.co2_grams_per_mile) / 1000 AS trip_co2_kgs,
+        -- Total CO2 output (kg)
+        (gt.trip_distance * em.co2_grams_per_mile) / 1000 as trip_co2_kgs,
 
-        DATE_DIFF('minute', gt.pickup_datetime, gt.dropoff_datetime) as duration_minutes,
+        -- Trip duration (minutes)
+        date_diff('minute', gt.pickup_datetime, gt.dropoff_datetime) as duration_minutes,
 
-        CASE
-            WHEN duration_minutes > 0
-            THEN gt.trip_distance / (duration_minutes / 60.0)
-            ELSE 0
-        END AS avg_mph,
+        -- Average speed (mph)
+        case
+            when date_diff('minute', gt.pickup_datetime, gt.dropoff_datetime) > 0
+            then gt.trip_distance / (date_diff('minute', gt.pickup_datetime, gt.dropoff_datetime) / 60.0)
+            else 0
+        end as avg_mph,
 
-        EXTRACT(hour FROM gt.pickup_datetime) AS hour_of_day,
-        EXTRACT(dayofweek FROM gt.pickup_datetime) AS day_of_week,
-        EXTRACT(week FROM gt.pickup_datetime) AS week_of_year,
-        EXTRACT(month FROM gt.pickup_datetime) AS month_of_year
-    FROM green_trips gt
-    LEFT JOIN {{ source('main', 'emissions') }} em
-        ON gt.service_type = em.vehicle_category -- adjust join logic!
+        -- Date parts
+        extract(hour from gt.pickup_datetime) as hour_of_day,
+        extract(dayofweek from gt.pickup_datetime) as day_of_week,
+        extract(week from gt.pickup_datetime) as week_of_year,
+        extract(month from gt.pickup_datetime) as month_of_year
+
+    from green_trips gt
+    left join {{ source('main', 'emissions') }} em
+        on gt.vehicle_type = em.vehicle_type
+        and gt.fuel_type = em.fuel_Type
 )
 
-SELECT *
-FROM final_calculations
-WHERE trip_distance > 0
-  AND duration_minutes > 0;
+select *
+from final_calculations
+where trip_distance > 0
+  and duration_minutes > 0;

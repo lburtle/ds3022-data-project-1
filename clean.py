@@ -134,12 +134,12 @@ def clean():
 
         con.execute(f"""
                     DELETE FROM yellow
-                    WHERE date_diff('hour', tpep_dropoff_datetime - tpep_pickup_datetime) > 24
+                    WHERE date_diff('hour', tpep_dropoff_datetime, tpep_pickup_datetime) > 24
                 """)
 
         con.execute(f"""
                     DELETE FROM green
-                    WHERE date_diff('hour', lpep_dropoff_datetime - lpep_pickup_datetime) > 24
+                    WHERE date_diff('hour', lpep_dropoff_datetime, lpep_pickup_datetime) > 24
                 """)
 
         logger.info("Cleaning executed")
